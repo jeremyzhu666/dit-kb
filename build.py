@@ -187,9 +187,27 @@ def render_pager(idx: int) -> tuple[str, str]:
     return prev_html, next_html
 
 
-def write_page(title: str, active_key: str, body: str, out_file: Path, flat_idx: int):
+def visible_len(src: str) -> int:
+    """粗略计算正文可见字数，用于判断是否为待施工页面。"""
+    import re as _re
+    text = _re.sub(r'[#>\-*_`|\[\]()（）。，、：:；;！!？?\s]', '', src)
+    return len(text)
+
+
+WIP_BOX = """
+<div style="margin:28px 0;padding:24px;border:1px dashed #d0d7de;border-radius:12px;background:#fff8e6;">
+  <div style="font-size:32px;line-height:1;">🚧</div>
+  <h3 style="margin:10px 0 6px;font-size:17px;font-weight:650;">本页内容施工中</h3>
+  <p style="margin:0;font-size:14px;color:#6e7781;">这一篇已经在写作计划里，正在根据一线访谈和实战案例整理。先去左侧看看其他章节，或者过几天再来——本库持续更新。</p>
+</div>
+"""
+
+
+def write_page(title: str, active_key: str, body: str, out_file: Path, flat_idx: int, wip: bool = False):
     prev_html, next_html = render_pager(flat_idx)
     crumb = f"DIT 知识库 / {title}" if title != "首页" else "DIT 知识库"
+    if wip:
+        body += WIP_BOX
     out_file.parent.mkdir(parents=True, exist_ok=True)
     out_file.write_text(
         TEMPLATE.format(title=title, crumb=crumb, nav=render_nav(active_key),
@@ -203,7 +221,8 @@ write_page("首页", "", home_body, OUT / "index.html", 0)
 
 for i, (g, title, href, key) in enumerate(nav_items, start=1):
     f = next(x for x in groups[g] if slug(x.relative_to(SRC)) == key)
-    body = md.render(f.read_text(encoding="utf-8"))
-    write_page(title, key, body, OUT / (key + ".html"), i)
+    src = f.read_text(encoding="utf-8")
+    body = md.render(src)
+    write_page(title, key, body, OUT / (key + ".html"), i, wip=visible_len(src) < 150)
 
 print(f"built {len(nav_items) + 1} pages -> {OUT}")
