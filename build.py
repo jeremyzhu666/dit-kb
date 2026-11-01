@@ -164,7 +164,7 @@ for g in sorted(groups):
 flat = [("首页", "index.html", "")] + [(t, h, k) for _, t, h, k in nav_items]
 
 
-def render_nav(active: str) -> str:
+def render_nav(active: str, prefix: str = "") -> str:
     html = []
     cur = None
     for g, title, href, key in nav_items:
@@ -172,18 +172,18 @@ def render_nav(active: str) -> str:
             html.append(f'<div class="group">{g or "综合"}</div>')
             cur = g
         cls = ' class="navlink active"' if key == active else ' class="navlink"'
-        html.append(f'<a href="{href}"{cls}>{title}</a>')
+        html.append(f'<a href="{prefix}{href}"{cls}>{title}</a>')
     return "\n".join(html)
 
 
-def render_pager(idx: int) -> tuple[str, str]:
+def render_pager(idx: int, prefix: str = "") -> tuple[str, str]:
     prev_html = next_html = ""
     if idx > 0:
         t, h, _ = flat[idx - 1]
-        prev_html = f'<a class="prev" href="{h}"><span class="dir">← 上一篇</span>{t}</a>'
+        prev_html = f'<a class="prev" href="{prefix}{h}"><span class="dir">← 上一篇</span>{t}</a>'
     if idx < len(flat) - 1:
         t, h, _ = flat[idx + 1]
-        next_html = f'<a class="next" href="{h}"><span class="dir">下一篇 →</span>{t}</a>'
+        next_html = f'<a class="next" href="{prefix}{h}"><span class="dir">下一篇 →</span>{t}</a>'
     return prev_html, next_html
 
 
@@ -204,13 +204,16 @@ WIP_BOX = """
 
 
 def write_page(title: str, active_key: str, body: str, out_file: Path, flat_idx: int, wip: bool = False):
-    prev_html, next_html = render_pager(flat_idx)
+    # 子目录页面需要回退前缀，否则导航/翻页链接会相对当前目录解析导致 404
+    rel = out_file.relative_to(OUT)
+    prefix = "../" * (len(rel.parts) - 1)
+    prev_html, next_html = render_pager(flat_idx, prefix)
     crumb = f"DIT 知识库 / {title}" if title != "首页" else "DIT 知识库"
     if wip:
         body += WIP_BOX
     out_file.parent.mkdir(parents=True, exist_ok=True)
     out_file.write_text(
-        TEMPLATE.format(title=title, crumb=crumb, nav=render_nav(active_key),
+        TEMPLATE.format(title=title, crumb=crumb, nav=render_nav(active_key, prefix),
                         body=body, updated=TODAY, prev=prev_html, next=next_html),
         encoding="utf-8")
 
