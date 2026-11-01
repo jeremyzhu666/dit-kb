@@ -1,0 +1,9 @@
+{
+  "name": "dit-kb-site",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "node server.js",
+    "build": "python3 build.py"
+  }
+}

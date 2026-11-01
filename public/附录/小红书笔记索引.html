@@ -1,0 +1,556 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>小红书笔记索引 · DIT 知识库</title>
+<style>
+:root {
+  --sidebar-w: 280px;
+  --accent: #1f6feb;
+  --accent-soft: #eaf2fe;
+  --ink: #24292f;
+  --muted: #6e7781;
+  --line: #e6e8eb;
+  --bg: #ffffff;
+  --sidebar-bg: #fafbfc;
+  --hint-bg: #f6f8fa;
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif; background: var(--bg); color: var(--ink); line-height: 1.75; font-size: 15px; }
+a { color: var(--accent); text-decoration: none; }
+a:hover { text-decoration: underline; }
+
+/* 顶栏 */
+.topbar { position: sticky; top: 0; z-index: 20; display: flex; align-items: center; gap: 10px; height: 52px; padding: 0 20px; background: rgba(255,255,255,.92); backdrop-filter: blur(8px); border-bottom: 1px solid var(--line); }
+.topbar .logo { width: 24px; height: 24px; border-radius: 6px; background: var(--accent); color: #fff; font-size: 13px; font-weight: 700; display: flex; align-items: center; justify-content: center; }
+.topbar .site { font-weight: 600; font-size: 15px; }
+.topbar .tag { font-size: 12px; color: var(--muted); }
+.topbar .crumb { margin-left: auto; font-size: 13px; color: var(--muted); }
+
+.layout { display: flex; min-height: calc(100vh - 52px); }
+
+/* 侧边栏（GitBook 文档树） */
+.sidebar { width: var(--sidebar-w); flex-shrink: 0; background: var(--sidebar-bg); border-right: 1px solid var(--line); padding: 18px 14px 60px; position: sticky; top: 52px; height: calc(100vh - 52px); overflow-y: auto; }
+.sidebar .search { width: 100%; padding: 7px 12px; font-size: 13px; border: 1px solid var(--line); border-radius: 8px; background: #fff; outline: none; margin-bottom: 14px; }
+.sidebar .search:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+.sidebar .group { font-size: 11px; font-weight: 600; color: var(--muted); letter-spacing: .06em; text-transform: uppercase; margin: 18px 8px 4px; }
+.sidebar a.navlink { display: block; color: #3b4048; font-size: 13.5px; padding: 5px 10px; border-radius: 6px; }
+.sidebar a.navlink:hover { background: #eef1f4; text-decoration: none; }
+.sidebar a.navlink.active { background: var(--accent-soft); color: var(--accent); font-weight: 600; }
+.sidebar a.navlink.hidden, .sidebar .group.hidden { display: none; }
+
+/* 内容区 */
+.content { flex: 1; min-width: 0; padding: 40px 48px 80px; }
+.content .inner { max-width: 780px; margin: 0 auto; }
+.content h1 { font-size: 30px; font-weight: 700; margin-bottom: 20px; letter-spacing: -.01em; }
+.content h2 { font-size: 21px; font-weight: 650; margin: 36px 0 12px; padding-top: 8px; }
+.content h3 { font-size: 16.5px; font-weight: 650; margin: 24px 0 8px; }
+.content p { margin: 10px 0; }
+.content blockquote { border: 1px solid var(--line); border-left: 3px solid var(--accent); background: var(--hint-bg); padding: 12px 16px; margin: 14px 0; border-radius: 0 8px 8px 0; color: #3b4048; font-size: 14px; }
+.content blockquote p { margin: 4px 0; }
+.content table { border-collapse: collapse; width: 100%; margin: 16px 0; font-size: 14px; display: block; overflow-x: auto; }
+.content thead, .content tbody { display: table; width: 100%; }
+.content th, .content td { border: 1px solid var(--line); padding: 8px 12px; text-align: left; }
+.content th { background: var(--hint-bg); font-weight: 600; }
+.content ul, .content ol { margin: 10px 0 10px 24px; }
+.content li { margin: 4px 0; }
+.content code { background: var(--hint-bg); border: 1px solid var(--line); padding: 1px 6px; border-radius: 5px; font-size: 13px; }
+.content pre { background: var(--hint-bg); border: 1px solid var(--line); padding: 14px 16px; border-radius: 8px; overflow-x: auto; margin: 14px 0; }
+.content pre code { background: none; border: none; padding: 0; }
+.content hr { border: none; border-top: 1px solid var(--line); margin: 28px 0; }
+.content strong { font-weight: 650; }
+
+/* 页脚：更新时间 + 上/下一篇 */
+.foot { max-width: 780px; margin: 48px auto 0; }
+.updated { font-size: 13px; color: var(--muted); padding-top: 16px; border-top: 1px solid var(--line); }
+.pager { display: flex; justify-content: space-between; gap: 14px; margin-top: 20px; }
+.pager a { flex: 1; max-width: 48%; border: 1px solid var(--line); border-radius: 10px; padding: 12px 16px; font-size: 13.5px; color: var(--ink); background: #fff; }
+.pager a:hover { border-color: var(--accent); text-decoration: none; box-shadow: 0 1px 4px rgba(31,111,235,.12); }
+.pager a .dir { display: block; font-size: 12px; color: var(--muted); margin-bottom: 2px; }
+.pager a.next { text-align: right; margin-left: auto; }
+
+@media (max-width: 820px) {
+  .layout { flex-direction: column; }
+  .sidebar { width: 100%; height: auto; position: static; border-right: none; border-bottom: 1px solid var(--line); }
+  .content { padding: 26px 20px 60px; }
+  .topbar .crumb { display: none; }
+}
+</style>
+</head>
+<body>
+<header class="topbar">
+  <span class="logo">D</span>
+  <span class="site">DIT 知识库</span>
+  <span class="tag">短片 / 广告 / MV · 实战教学版</span>
+  <span class="crumb">DIT 知识库 / 小红书笔记索引</span>
+</header>
+<div class="layout">
+<nav class="sidebar">
+<input class="search" type="search" placeholder="搜索文档…" oninput="filterNav(this.value)">
+<div class="group">01-素材管理与备份</div>
+<a href="01-%E7%B4%A0%E6%9D%90%E7%AE%A1%E7%90%86%E4%B8%8E%E5%A4%87%E4%BB%BD/%E5%A4%87%E4%BB%BD%E7%AD%96%E7%95%A5%E4%B8%8E%E6%A0%A1%E9%AA%8C.html" class="navlink">备份策略与校验</a>
+<a href="01-%E7%B4%A0%E6%9D%90%E7%AE%A1%E7%90%86%E4%B8%8E%E5%A4%87%E4%BB%BD/%E5%AD%98%E5%82%A8%E4%B8%8E%E5%91%BD%E5%90%8D%E8%A7%84%E8%8C%83.html" class="navlink">存储与命名规范</a>
+<a href="01-%E7%B4%A0%E6%9D%90%E7%AE%A1%E7%90%86%E4%B8%8E%E5%A4%87%E4%BB%BD/%E5%AD%98%E5%82%A8%E5%8D%A1%E5%BE%AA%E7%8E%AF%E4%B8%8E%E6%8B%B7%E5%8D%A1%E7%BB%86%E8%8A%82.html" class="navlink">存储卡循环与拷卡细节</a>
+<a href="01-%E7%B4%A0%E6%9D%90%E7%AE%A1%E7%90%86%E4%B8%8E%E5%A4%87%E4%BB%BD/%E5%AD%98%E5%82%A8%E7%A1%AC%E4%BB%B6%E4%B8%8E%E5%A4%87%E4%BB%BD%E7%BB%8F%E9%AA%8C.html" class="navlink">存储硬件与备份经验</a>
+<a href="01-%E7%B4%A0%E6%9D%90%E7%AE%A1%E7%90%86%E4%B8%8E%E5%A4%87%E4%BB%BD/%E7%B4%A0%E6%9D%90%E6%8E%A5%E6%94%B6%E4%B8%8E%E6%B8%85%E7%82%B9.html" class="navlink">素材接收与清点</a>
+<div class="group">02-现场流程与样片</div>
+<a href="02-%E7%8E%B0%E5%9C%BA%E6%B5%81%E7%A8%8B%E4%B8%8E%E6%A0%B7%E7%89%87/ARRI%E6%91%84%E5%BD%B1%E6%9C%BA%E5%AE%9E%E6%93%8D.html" class="navlink">ARRI摄影机实操</a>
+<a href="02-%E7%8E%B0%E5%9C%BA%E6%B5%81%E7%A8%8B%E4%B8%8E%E6%A0%B7%E7%89%87/%E5%9C%BA%E8%AE%B0%E4%B8%8E%E5%85%83%E6%95%B0%E6%8D%AE.html" class="navlink">场记与元数据</a>
+<a href="02-%E7%8E%B0%E5%9C%BA%E6%B5%81%E7%A8%8B%E4%B8%8E%E6%A0%B7%E7%89%87/%E6%97%B6%E9%97%B4%E7%A0%81%E5%AE%9E%E6%88%98.html" class="navlink">时间码实战</a>
+<a href="02-%E7%8E%B0%E5%9C%BA%E6%B5%81%E7%A8%8B%E4%B8%8E%E6%A0%B7%E7%89%87/%E6%AF%8F%E6%97%A5%E6%A0%B7%E7%89%87.html" class="navlink">每日样片</a>
+<a href="02-%E7%8E%B0%E5%9C%BA%E6%B5%81%E7%A8%8B%E4%B8%8E%E6%A0%B7%E7%89%87/%E7%8E%B0%E5%9C%BA%E5%B7%A5%E4%BD%9C%E6%B5%81%E6%80%BB%E8%A7%88.html" class="navlink">现场工作流总览</a>
+<a href="02-%E7%8E%B0%E5%9C%BA%E6%B5%81%E7%A8%8B%E4%B8%8E%E6%A0%B7%E7%89%87/%E8%BD%AC%E7%A0%81%E4%B8%8E%E4%BB%A3%E7%90%86.html" class="navlink">转码与代理</a>
+<div class="group">03-后期对接与交付</div>
+<a href="03-%E5%90%8E%E6%9C%9F%E5%AF%B9%E6%8E%A5%E4%B8%8E%E4%BA%A4%E4%BB%98/%E4%BA%A4%E4%BB%98%E8%A7%84%E8%8C%83%E4%B8%8E%E6%89%93%E5%8C%85.html" class="navlink">交付规范与打包</a>
+<a href="03-%E5%90%8E%E6%9C%9F%E5%AF%B9%E6%8E%A5%E4%B8%8E%E4%BA%A4%E4%BB%98/%E5%89%AA%E8%BE%91%E5%AF%B9%E6%8E%A5%E4%B8%8E%E5%A5%97%E5%BA%95.html" class="navlink">剪辑对接与套底</a>
+<a href="03-%E5%90%8E%E6%9C%9F%E5%AF%B9%E6%8E%A5%E4%B8%8E%E4%BA%A4%E4%BB%98/%E5%90%88%E6%9D%BF%E5%A5%97%E5%BA%95%E4%B8%8E%E8%BD%AC%E7%A0%81.html" class="navlink">合板套底与转码</a>
+<a href="03-%E5%90%8E%E6%9C%9F%E5%AF%B9%E6%8E%A5%E4%B8%8E%E4%BA%A4%E4%BB%98/%E5%B8%B8%E8%A7%81%E9%97%AE%E9%A2%98%E4%B8%8E%E4%BA%8B%E6%95%85%E6%A1%88%E4%BE%8B.html" class="navlink">常见问题与事故案例</a>
+<div class="group">04-商务与接单</div>
+<a href="04-%E5%95%86%E5%8A%A1%E4%B8%8E%E6%8E%A5%E5%8D%95/DIT%E8%81%8C%E4%B8%9A%E4%B8%8E%E9%A1%B9%E7%9B%AE%E7%BB%8F%E9%AA%8C.html" class="navlink">DIT职业与项目经验</a>
+<a href="04-%E5%95%86%E5%8A%A1%E4%B8%8E%E6%8E%A5%E5%8D%95/%E5%AF%B9%E5%85%AC%E5%BC%80%E7%A5%A8.html" class="navlink">对公开票</a>
+<a href="04-%E5%95%86%E5%8A%A1%E4%B8%8E%E6%8E%A5%E5%8D%95/%E6%94%B6%E8%B4%B9%E6%A0%87%E5%87%862027.html" class="navlink">收费标准2027</a>
+<a href="04-%E5%95%86%E5%8A%A1%E4%B8%8E%E6%8E%A5%E5%8D%95/%E8%81%8C%E4%B8%9A%E8%B7%AF%E5%BE%84%E4%B8%8E%E6%88%90%E9%95%BF.html" class="navlink">职业路径与成长</a>
+<div class="group">附录</div>
+<a href="%E9%99%84%E5%BD%95/%E5%B0%8F%E7%BA%A2%E4%B9%A6%E7%AC%94%E8%AE%B0%E7%B4%A2%E5%BC%95.html" class="navlink active">小红书笔记索引</a>
+<a href="%E9%99%84%E5%BD%95/%E6%9C%AF%E8%AF%AD%E8%A1%A8.html" class="navlink">术语表</a>
+<a href="%E9%99%84%E5%BD%95/%E6%A3%80%E6%9F%A5%E6%B8%85%E5%8D%95.html" class="navlink">检查清单</a>
+<a href="%E9%99%84%E5%BD%95/%E8%A1%8C%E4%B8%9A%E6%A1%88%E4%BE%8B%E4%B8%8E%E8%AE%BE%E5%A4%87%E8%B5%84%E8%AE%AF.html" class="navlink">行业案例与设备资讯</a>
+</nav>
+<main class="content"><div class="inner">
+<h1>小红书「酷卡学院」笔记索引</h1>
+<blockquote>
+<p>账号：酷卡学院 Academy KK（小红书），共 56 篇笔记，2026-11-01 采集。
+正文存档于工作区 <code>xhs_notes/</code>，图片型笔记转录稿在 <code>xhs_notes/ocr/</code>。</p>
+</blockquote>
+<table>
+<thead>
+<tr>
+<th>#</th>
+<th>笔记</th>
+<th>日期</th>
+<th>点赞</th>
+<th>一句话摘要</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>DIT大学习 TVC拍摄常见摄影机及存储卡🎥</td>
+<td>2025-08-07</td>
+<td>207</td>
+<td></td>
+</tr>
+<tr>
+<td>2</td>
+<td>DMT工作要点：案例分析和工作流优化</td>
+<td>2025-05-31</td>
+<td>46</td>
+<td></td>
+</tr>
+<tr>
+<td>3</td>
+<td>DMT最核心的技能</td>
+<td>2025-01-15</td>
+<td>51</td>
+<td></td>
+</tr>
+<tr>
+<td>4</td>
+<td>存储卡的三色分类🚥理清主线任务</td>
+<td>2025-01-15</td>
+<td>69</td>
+<td></td>
+</tr>
+<tr>
+<td>5</td>
+<td>分享一些拷卡的细节</td>
+<td>2025-01-15</td>
+<td>65</td>
+<td></td>
+</tr>
+<tr>
+<td>6</td>
+<td>剧组升级指南📒大学生怎么进剧组？</td>
+<td>2024-12-26</td>
+<td>164</td>
+<td></td>
+</tr>
+<tr>
+<td>7</td>
+<td>真的有用👍手把手教你成为专业的学生组DMT</td>
+<td>2024-12-25</td>
+<td>78</td>
+<td></td>
+</tr>
+<tr>
+<td>8</td>
+<td>高速摄影机Freefly Wave素材转码方法💻</td>
+<td>2024-10-27</td>
+<td>68</td>
+<td></td>
+</tr>
+<tr>
+<td>9</td>
+<td>DMT基础知识：存储卡循环方法🔄</td>
+<td>2024-08-31</td>
+<td>78</td>
+<td></td>
+</tr>
+<tr>
+<td>10</td>
+<td>如何使用达芬奇生成代理并合板</td>
+<td>2024-07-30</td>
+<td>395</td>
+<td></td>
+</tr>
+<tr>
+<td>11</td>
+<td>复制粘贴有什么门道🚪？</td>
+<td>2024-07-06</td>
+<td>20</td>
+<td></td>
+</tr>
+<tr>
+<td>12</td>
+<td>关于备份制片需要了解的事</td>
+<td>2024-07-04</td>
+<td>73</td>
+<td></td>
+</tr>
+<tr>
+<td>13</td>
+<td>ARRI摄影机格卡教程📹大LF</td>
+<td>2024-06-11</td>
+<td>96</td>
+<td></td>
+</tr>
+<tr>
+<td>14</td>
+<td>案例分享📒职业DIT如何解决现场问题</td>
+<td>2024-05-26</td>
+<td>48</td>
+<td></td>
+</tr>
+<tr>
+<td>15</td>
+<td>时码口故障🧑‍🔧时间码偏移如何修改？</td>
+<td>2024-05-23</td>
+<td>66</td>
+<td></td>
+</tr>
+<tr>
+<td>16</td>
+<td>mac如何查看充电器功率🔋</td>
+<td>2024-05-22</td>
+<td>41</td>
+<td></td>
+</tr>
+<tr>
+<td>17</td>
+<td>ARRI多功能目镜MVF一代二代使用方式</td>
+<td>2024-05-13</td>
+<td>43</td>
+<td></td>
+</tr>
+<tr>
+<td>18</td>
+<td>格卡请注意⚠️流程规范极其重要</td>
+<td>2024-05-12</td>
+<td>91</td>
+<td></td>
+</tr>
+<tr>
+<td>19</td>
+<td>酷卡科普·实际工作中素材量较大的情况</td>
+<td>2024-05-01</td>
+<td>142</td>
+<td></td>
+</tr>
+<tr>
+<td>20</td>
+<td>ARRI摄影机存储卡/读卡器价格💰</td>
+<td>2024-04-14</td>
+<td>54</td>
+<td></td>
+</tr>
+<tr>
+<td>21</td>
+<td>关于Prores RAW你需要了解的事</td>
+<td>2024-04-14</td>
+<td>156</td>
+<td></td>
+</tr>
+<tr>
+<td>22</td>
+<td>索尼a7s3支持时间码输入</td>
+<td>2024-03-28</td>
+<td>26</td>
+<td></td>
+</tr>
+<tr>
+<td>23</td>
+<td>Codex读卡器低性能提示如何更新固件？</td>
+<td>2024-03-17</td>
+<td>26</td>
+<td></td>
+</tr>
+<tr>
+<td>24</td>
+<td>超好用的时码批量修改工具Qtchange</td>
+<td>2024-03-05</td>
+<td>61</td>
+<td></td>
+</tr>
+<tr>
+<td>25</td>
+<td>硬盘格式到底该如何选？专业DIT告诉你💾</td>
+<td>2024-03-05</td>
+<td>707</td>
+<td></td>
+</tr>
+<tr>
+<td>26</td>
+<td>🙋想买莱斯硬盘，你需要知道这些事！</td>
+<td>2024-02-18</td>
+<td>130</td>
+<td></td>
+</tr>
+<tr>
+<td>27</td>
+<td>DIT工作对比·不同项目对DIT有什么要求</td>
+<td>2024-02-16</td>
+<td>87</td>
+<td></td>
+</tr>
+<tr>
+<td>28</td>
+<td>剪辑软件横评😄Pr/达芬奇/FCPX</td>
+<td>2024-02-14</td>
+<td>337</td>
+<td></td>
+</tr>
+<tr>
+<td>29</td>
+<td>搞懂帧率👌专业DIT教你理解升格/降格</td>
+<td>2024-02-13</td>
+<td>325</td>
+<td></td>
+</tr>
+<tr>
+<td>30</td>
+<td>专业影视制作流程的秘密⁉️离线剪辑是什么</td>
+<td>2024-02-12</td>
+<td>172</td>
+<td></td>
+</tr>
+<tr>
+<td>31</td>
+<td>FCPX剪辑索尼素材套底失败解决方法</td>
+<td></td>
+<td>158</td>
+<td></td>
+</tr>
+<tr>
+<td>32</td>
+<td>50帧MP4素材注意事项</td>
+<td></td>
+<td>55</td>
+<td></td>
+</tr>
+<tr>
+<td>33</td>
+<td>达芬奇如何进行多机位快速合板🔜</td>
+<td></td>
+<td>821</td>
+<td></td>
+</tr>
+<tr>
+<td>34</td>
+<td>综艺纪录片多机位拍摄如何快速合板🔜</td>
+<td></td>
+<td>1051</td>
+<td></td>
+</tr>
+<tr>
+<td>35</td>
+<td>《繁花》的10个技术细节</td>
+<td></td>
+<td>241</td>
+<td></td>
+</tr>
+<tr>
+<td>36</td>
+<td>ARRI RAW压缩编码HDE使用教程</td>
+<td></td>
+<td>100</td>
+<td></td>
+</tr>
+<tr>
+<td>37</td>
+<td>电影机电控滤镜系统Cinefade，实现景深自由</td>
+<td></td>
+<td>48</td>
+<td></td>
+</tr>
+<tr>
+<td>38</td>
+<td>DIT实用重命名软件推荐：ABFR</td>
+<td></td>
+<td>68</td>
+<td></td>
+</tr>
+<tr>
+<td>39</td>
+<td>非广！DIT自用推荐-雷电硬盘盒</td>
+<td></td>
+<td>39</td>
+<td></td>
+</tr>
+<tr>
+<td>40</td>
+<td>如影4D RAW授权好贵啊🥹</td>
+<td></td>
+<td>21</td>
+<td></td>
+</tr>
+<tr>
+<td>41</td>
+<td>TVC专业拍摄需要DMT的十个原因！</td>
+<td></td>
+<td>37</td>
+<td></td>
+</tr>
+<tr>
+<td>42</td>
+<td>别以为DIT只是拷卡啦！DIT和DMT的区别</td>
+<td></td>
+<td>159</td>
+<td></td>
+</tr>
+<tr>
+<td>43</td>
+<td>常见时码线科普</td>
+<td></td>
+<td>102</td>
+<td></td>
+</tr>
+<tr>
+<td>44</td>
+<td>BMPCC摄影机时码器使用教程</td>
+<td></td>
+<td>50</td>
+<td></td>
+</tr>
+<tr>
+<td>45</td>
+<td>章鱼时码器连接索尼FX3/30教程</td>
+<td></td>
+<td>89</td>
+<td></td>
+</tr>
+<tr>
+<td>46</td>
+<td>后期一键合板！索尼FX3/30时间码使用教程</td>
+<td></td>
+<td>252</td>
+<td></td>
+</tr>
+<tr>
+<td>47</td>
+<td>想要一键合板？索尼A7S3时间码使用教程来了</td>
+<td></td>
+<td>206</td>
+<td></td>
+</tr>
+<tr>
+<td>48</td>
+<td>DIT云监使用教程·T80直播机</td>
+<td></td>
+<td>39</td>
+<td></td>
+</tr>
+<tr>
+<td>49</td>
+<td>新品资讯·国产触控时码器</td>
+<td></td>
+<td>11</td>
+<td></td>
+</tr>
+<tr>
+<td>50</td>
+<td>ARRI摄影机基础知识·主屏幕详解</td>
+<td></td>
+<td>118</td>
+<td></td>
+</tr>
+<tr>
+<td>51</td>
+<td>为什么不推荐硬盘和阵列使用ExFAT？</td>
+<td></td>
+<td>250</td>
+<td></td>
+</tr>
+<tr>
+<td>52</td>
+<td>DIT小知识·ARRI Alexa 35格卡教程</td>
+<td></td>
+<td>34</td>
+<td></td>
+</tr>
+<tr>
+<td>53</td>
+<td>DIT小知识·ARRI mini LF格卡教程</td>
+<td></td>
+<td>59</td>
+<td></td>
+</tr>
+<tr>
+<td>54</td>
+<td>DIT小知识·ARRI mini格卡教程</td>
+<td></td>
+<td>128</td>
+<td></td>
+</tr>
+<tr>
+<td>55</td>
+<td>酷卡小课堂·硬盘存储知识分享</td>
+<td></td>
+<td>415</td>
+<td></td>
+</tr>
+<tr>
+<td>56</td>
+<td>酷卡小课堂·为什么你需要专业的dit</td>
+<td></td>
+<td>93</td>
+<td></td>
+</tr>
+</tbody>
+</table>
+
+<div class="foot">
+  <div class="updated">最后更新：2026-11-01</div>
+  <div class="pager"><a class="prev" href="04-%E5%95%86%E5%8A%A1%E4%B8%8E%E6%8E%A5%E5%8D%95/%E8%81%8C%E4%B8%9A%E8%B7%AF%E5%BE%84%E4%B8%8E%E6%88%90%E9%95%BF.html"><span class="dir">← 上一篇</span>职业路径与成长</a><a class="next" href="%E9%99%84%E5%BD%95/%E6%9C%AF%E8%AF%AD%E8%A1%A8.html"><span class="dir">下一篇 →</span>术语表</a></div>
+</div>
+</div></main>
+</div>
+<script>
+function filterNav(q) {
+  q = q.trim().toLowerCase();
+  document.querySelectorAll('.sidebar a.navlink').forEach(a => {
+    a.classList.toggle('hidden', q && !a.textContent.toLowerCase().includes(q));
+  });
+  document.querySelectorAll('.sidebar .group').forEach(g => {
+    let el = g.nextElementSibling, any = false;
+    while (el && !el.classList.contains('group')) {
+      if (el.classList.contains('navlink') && !el.classList.contains('hidden')) any = true;
+      el = el.nextElementSibling;
+    }
+    g.classList.toggle('hidden', !any);
+  });
+}
+</script>
+</body>
+</html>
